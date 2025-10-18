@@ -120,8 +120,15 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
       });
 
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json();
-        throw new Error(errorData.error || 'Erro ao fazer upload');
+        let errorMessage = 'Erro ao fazer upload';
+        try {
+          const errorData = await uploadResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          const errorText = await uploadResponse.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const uploadData = await uploadResponse.json();
@@ -148,8 +155,15 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
       });
 
       if (!saveResponse.ok) {
-        const errorData = await saveResponse.json();
-        throw new Error(errorData.error || 'Erro ao salvar vídeo');
+        let errorMessage = 'Erro ao salvar vídeo';
+        try {
+          const errorData = await saveResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          const errorText = await saveResponse.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       toast.success('Vídeo adicionado com sucesso!', {
