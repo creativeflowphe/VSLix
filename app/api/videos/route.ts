@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         format: format || 'mp4',
         width: width || 0,
         height: height || 0,
-        size_bytes: bytes || 0,
+        size: bytes || 0,
         views: 0,
         status: 'active'
       })
