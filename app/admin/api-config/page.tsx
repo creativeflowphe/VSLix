@@ -5,10 +5,9 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/components/admin-layout';
-import { Upload, Copy, Cloud, Database, CheckCircle2, XCircle, Loader2, Plug } from 'lucide-react';
+import { Upload, Cloud, Database, CheckCircle2, XCircle, Loader2, Plug } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import useSWR from 'swr';
@@ -87,72 +86,40 @@ export default function ApiConfigPage() {
       return;
     }
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-
-    if (!cloudName) {
-      toast.error('Variáveis de ambiente do Cloudinary não configuradas');
-      return;
-    }
-
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
-      formData.append('upload_preset', 'ml_default');
 
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao fazer upload');
+      }
 
       const data = await response.json();
 
-      if (data.secure_url) {
+      if (data.url) {
         toast.success('Upload realizado com sucesso!', {
-          description: data.secure_url,
+          description: data.url,
           duration: 5000,
         });
         setUploadFile(null);
       } else {
         throw new Error('Upload falhou');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Erro ao fazer upload para o Cloudinary');
+      toast.error(error.message || 'Erro ao fazer upload para o Cloudinary');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const envVarsConfig = {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'your-supabase-url',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-supabase-anon-key',
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'your-secret-key',
-    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
-    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || 'your-api-key',
-    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || 'your-api-secret',
-  };
-
-  const handleCopyEnvVars = () => {
-    const vercelJson = JSON.stringify(
-      Object.entries(envVarsConfig).map(([key, value]) => ({
-        key,
-        value,
-        target: ['production', 'preview', 'development'],
-      })),
-      null,
-      2
-    );
-
-    navigator.clipboard.writeText(vercelJson);
-    toast.success('JSON copiado para o clipboard!', {
-      description: 'Cole no Vercel em Settings > Environment Variables',
-    });
-  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -287,57 +254,7 @@ export default function ApiConfigPage() {
             </Card>
           </motion.div>
 
-          <motion.div variants={cardVariants}>
-            <Card className="border-border/50 h-full">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#3b82f6]/10 flex items-center justify-center">
-                      <Copy className="w-5 h-5 text-[#3b82f6]" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-white">Env Vars Guide</CardTitle>
-                      <CardDescription className="text-gray-400">
-                        Variáveis de ambiente necessárias
-                      </CardDescription>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {Object.entries(envVarsConfig).map(([key, value]) => (
-                    <div key={key} className="space-y-1">
-                      <Label className="text-white text-xs">{key}</Label>
-                      <Input
-                        value={value}
-                        readOnly
-                        className="bg-white/5 border-border/50 text-gray-400 text-xs font-mono"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  onClick={handleCopyEnvVars}
-                  variant="outline"
-                  className="w-full border-border/50 text-white hover:bg-white/5"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy to Vercel (JSON)
-                </Button>
-
-                <div className="text-xs text-gray-400 bg-white/5 p-3 rounded-lg border border-border/50">
-                  <p className="font-medium text-white mb-1">Como usar:</p>
-                  <p>1. Cole o JSON copiado no Vercel</p>
-                  <p>2. Settings → Environment Variables</p>
-                  <p>3. Import from JSON</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={cardVariants} className="lg:col-span-2">
+          <motion.div variants={cardVariants} className="lg:col-span-1">
             <Card className="border-border/50 h-full">
               <CardHeader>
                 <div className="flex items-center gap-3">
