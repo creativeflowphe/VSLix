@@ -1,13 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: { unoptimized: true },
   experimental: {
-    serverActions: {
-      bodySizeLimit: '500mb',
-    },
+    serverComponentsExternalPackages: ['cloudinary'],
+  },
+  bodyParser: {
+    sizeLimit: '100mb', // Passa pro teu 60MB
   },
 };
 
