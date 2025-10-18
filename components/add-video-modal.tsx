@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,7 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import { Upload, X, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
 
 const videoSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
@@ -116,14 +114,14 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
       // Upload direto pro Cloudinary (bypass Vercel limit)
       const formData = new FormData();
       formData.append('file', validatedData.file);
-      formData.append('upload_preset', 'vsl_epica'); // Preset unsigned
+      formData.append('upload_preset', 'vsl_epica');
 
       const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/video/upload`, {
         method: 'POST',
         body: formData
       });
 
-      const uploadBodyText = await uploadResponse.text(); // Lê UMA VEZ como texto
+      const uploadBodyText = await uploadResponse.text();
       if (!uploadResponse.ok) {
         console.error('Upload error:', uploadResponse.status, uploadBodyText);
         toast.error(`Erro no upload ${uploadResponse.status}: ${uploadBodyText.slice(0, 100)}...`);
@@ -151,7 +149,7 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
             fake_progress: validatedData.showFakeBar,
             progress_color: validatedData.barColor,
             bar_color: validatedData.barColor,
-            thumbnail_url: uploadData.thumbnail_url,
+            thumbnail_url: uploadData.thumbnail_url || '',
             ab_variant: 'A',
             duration: uploadData.duration || 0,
             format: uploadData.format || 'mp4',
@@ -159,7 +157,8 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
             width: uploadData.width || 0,
             height: uploadData.height || 0,
             bytes: uploadData.bytes || 0,
-            show_fake_bar: validatedData.showFakeBar
+            show_fake_bar: validatedData.showFakeBar,
+            status: 'active' // Salva 'status' como 'active'
           }
         ])
         .select()
@@ -167,7 +166,7 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
 
       if (error) {
         console.error('Supabase error:', error);
-        toast.error('Erro ao salvar no banco: ' + error.message);
+        toast.error('Erro ao salvar vídeo: ' + error.message);
         return;
       }
 
@@ -346,4 +345,68 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
                   transition={{ duration: 0.3 }}
                   className="overflow-hidden"
                 >
-                  <div className="space
+                  <div className="space-y-2">
+                    <Label htmlFor="bar-color" className="text-white">
+                      Cor da Barra
+                    </Label>
+                    <div className="flex gap-3">
+                      <div className="relative flex-1">
+                        <Input
+                          id="bar-color"
+                          type="text"
+                          value={barColor}
+                          onChange={(e) => setBarColor(e.target.value)}
+                          placeholder="#8b5cf6"
+                          className="bg-white/5 border-border/50 text-white pl-12"
+                          pattern="^#[0-9A-Fa-f]{6}$"
+                        />
+                        <div
+                          className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded border-2 border-white/20"
+                          style={{ backgroundColor: barColor }}
+                        />
+                      </div>
+                      <input
+                        type="color"
+                        value={barColor}
+                        onChange={(e) => setBarColor(e.target.value)}
+                        className="w-14 h-10 rounded border border-border/50 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleClose(false)}
+                    disabled={isSubmitting}
+                    className="flex-1 border-border/50 text-white hover:bg-white/5"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !file || !name}
+                    className="flex-1 bg-[#10b981] hover:bg-[#10b981]/90 text-white"
+                  >
+                    {isSubmitting ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      >
+                        <Upload className="w-4 h-4" />
+                      </motion.div>
+                    ) : (
+                      'Salvar Vídeo'
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </DialogContent>
+        )}
+      </AnimatePresence>
+    </Dialog>
+  );
+}
