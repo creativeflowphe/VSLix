@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Upload, X, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { supabase } from '@/lib/supabase';
 
 const videoSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
@@ -111,16 +112,17 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
 
       toast.loading('Fazendo upload do vídeo...', { id: 'upload' });
 
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', validatedData.file);
+      // Upload direto pro Cloudinary (bypass Vercel limit)
+      const formData = new FormData();
+      formData.append('file', validatedData.file);
+      formData.append('upload_preset', 'vsl_epica'); // Preset unsigned
 
-      const uploadResponse = await fetch('/api/upload', {
+      const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/video/upload`, {
         method: 'POST',
-        body: uploadFormData,
+        body: formData
       });
 
-      // Lê o body UMA VEZ como text para evitar "stream already read"
-      const uploadBodyText = await uploadResponse.text();
+      const uploadBodyText = await uploadResponse.text(); // Lê UMA VEZ como texto
       if (!uploadResponse.ok) {
         console.error('Upload error:', uploadResponse.status, uploadBodyText);
         toast.error(`Erro no upload ${uploadResponse.status}: ${uploadBodyText.slice(0, 100)}...`);
@@ -132,56 +134,49 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
         uploadData = JSON.parse(uploadBodyText);
       } catch (parseErr) {
         console.error('JSON parse error for upload:', parseErr);
-        toast.error('Resposta inválida do upload.');
+        toast.error('Resposta inválida do Cloudinary.');
         return;
       }
 
       toast.loading('Salvando informações do vídeo...', { id: 'upload' });
 
-      const saveResponse = await fetch('/api/videos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: validatedData.name,
-          url: uploadData.url,
-          autoplay: validatedData.autoplay,
-          showFakeBar: validatedData.showFakeBar, // Salva como 'show_fake_bar' no DB
-          barColor: validatedData.barColor,
-          duration: uploadData.duration || 0,
-          format: uploadData.format || 'mp4',
-          width: uploadData.width || 0,
-          height: uploadData.height || 0,
-          bytes: uploadData.bytes || 0,
-        }),
-      });
+      const { data, error } = await supabase
+        .from('videos')
+        .insert([
+          {
+            name: validatedData.name,
+            video_url: uploadData.secure_url,
+            autoplay: validatedData.autoplay,
+            fake_progress: validatedData.showFakeBar,
+            progress_color: validatedData.barColor,
+            bar_color: validatedData.barColor,
+            thumbnail_url: uploadData.thumbnail_url,
+            ab_variant: 'A',
+            duration: uploadData.duration || 0,
+            format: uploadData.format || 'mp4',
+            size: uploadData.bytes || 0,
+            width: uploadData.width || 0,
+            height: uploadData.height || 0,
+            bytes: uploadData.bytes || 0,
+            show_fake_bar: validatedData.showFakeBar
+          }
+        ])
+        .select()
+        .single();
 
-      // Lê o body UMA VEZ como text para save também
-      const saveBodyText = await saveResponse.text();
-      if (!saveResponse.ok) {
-        console.error('Save error:', saveResponse.status, saveBodyText);
-        toast.error(`Erro ao salvar ${saveResponse.status}: ${saveBodyText.slice(0, 100)}...`);
-        return;
-      }
-
-      let saveData;
-      try {
-        saveData = JSON.parse(saveBodyText);
-      } catch (parseErr) {
-        console.error('JSON parse error for save:', parseErr);
-        toast.error('Resposta inválida do save.');
+      if (error) {
+        console.error('Supabase error:', error);
+        toast.error('Erro ao salvar no banco: ' + error.message);
         return;
       }
 
       toast.success('Vídeo adicionado com sucesso!', {
         id: 'upload',
-        description: `${validatedData.name} foi adicionado à sua biblioteca`,
+        description: `${validatedData.name} foi adicionado à tua biblioteca`,
       });
 
       resetForm();
       onOpenChange(false);
-
       window.location.reload();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -217,7 +212,7 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
             >
               <DialogHeader>
                 <DialogTitle className="text-white text-2xl">Adicionar Vídeo</DialogTitle>
-                <DialogDescription className="text-gray-50">
+                <DialogDescription className="text-gray-400">
                   Faça upload de um novo vídeo MP4 (máx. 500MB) e configure as opções
                 </DialogDescription>
               </DialogHeader>
@@ -350,68 +345,4 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
                   transition={{ duration: 0.3 }}
                   className="overflow-hidden"
                 >
-                  <div className="space-y-2">
-                    <Label htmlFor="bar-color" className="text-white">
-                      Cor da Barra
-                    </Label>
-                    <div className="flex gap-3">
-                      <div className="relative flex-1">
-                        <Input
-                          id="bar-color"
-                          type="text"
-                          value={barColor}
-                          onChange={(e) => setBarColor(e.target.value)}
-                          placeholder="#8b5cf6"
-                          className="bg-white/5 border-border/50 text-white pl-12"
-                          pattern="^#[0-9A-Fa-f]{6}$"
-                        />
-                        <div
-                          className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded border-2 border-white/20"
-                          style={{ backgroundColor: barColor }}
-                        />
-                      </div>
-                      <input
-                        type="color"
-                        value={barColor}
-                        onChange={(e) => setBarColor(e.target.value)}
-                        className="w-14 h-10 rounded border border-border/50 cursor-pointer"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleClose(false)}
-                    disabled={isSubmitting}
-                    className="flex-1 border-border/50 text-white hover:bg-white/5"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || !file || !name}
-                    className="flex-1 bg-[#10b981] hover:bg-[#10b981]/90 text-white"
-                  >
-                    {isSubmitting ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <Upload className="w-4 h-4" />
-                      </motion.div>
-                    ) : (
-                      'Salvar Vídeo'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </DialogContent>
-        )}
-      </AnimatePresence>
-    </Dialog>
-  );
-}
+                  <div className="space
