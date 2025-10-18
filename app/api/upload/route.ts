@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300; // 5 minutes
+
 export async function POST(request: NextRequest) {
   try {
+    console.log('Starting upload process...');
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    console.log('File received:', file?.name, 'Size:', file?.size);
 
     if (!file) {
       return NextResponse.json(
@@ -36,6 +41,7 @@ export async function POST(request: NextRequest) {
     uploadFormData.append('folder', folder);
     uploadFormData.append('resource_type', 'video');
 
+    console.log('Uploading to Cloudinary...');
     const uploadResponse = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
       {
@@ -44,19 +50,17 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    console.log('Cloudinary response status:', uploadResponse.status);
+    const responseText = await uploadResponse.text();
+    console.log('Cloudinary response:', responseText.substring(0, 200));
+
     if (!uploadResponse.ok) {
       let errorMessage = 'Erro ao fazer upload para o Cloudinary';
       try {
-        const responseText = await uploadResponse.text();
-        console.error('Cloudinary error:', responseText);
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.error?.message || errorMessage;
-        } catch {
-          errorMessage = responseText || errorMessage;
-        }
-      } catch (e) {
-        console.error('Error reading response:', e);
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.error?.message || errorMessage;
+      } catch {
+        errorMessage = responseText || errorMessage;
       }
       return NextResponse.json(
         { error: errorMessage },
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadData = await uploadResponse.json();
+    const uploadData = JSON.parse(responseText);
 
     return NextResponse.json({
       success: true,
