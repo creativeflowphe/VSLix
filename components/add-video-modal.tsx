@@ -112,26 +112,29 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
       toast.loading('Fazendo upload do vídeo...', { id: 'upload' });
 
       const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
+      uploadFormData.append('file', validatedData.file);
 
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
         body: uploadFormData,
       });
 
+      // Lê o body UMA VEZ só como texto
+      const uploadBodyText = await uploadResponse.text();
       if (!uploadResponse.ok) {
-        let errorMessage = 'Erro ao fazer upload';
-        try {
-          const errorData = await uploadResponse.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          const errorText = await uploadResponse.text();
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        console.error('Upload error:', uploadResponse.status, uploadBodyText);
+        toast.error(`Erro no upload ${uploadResponse.status}: ${uploadBodyText.slice(0, 100)}`);
+        return;
       }
 
-      const uploadData = await uploadResponse.json();
+      let uploadData;
+      try {
+        uploadData = JSON.parse(uploadBodyText);
+      } catch (parseErr) {
+        console.error('JSON parse error for upload:', parseErr);
+        toast.error('Resposta inválida do upload.');
+        return;
+      }
 
       toast.loading('Salvando informações do vídeo...', { id: 'upload' });
 
@@ -146,24 +149,29 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
           autoplay: validatedData.autoplay,
           showFakeBar: validatedData.showFakeBar,
           barColor: validatedData.barColor,
-          duration: uploadData.duration,
-          format: uploadData.format,
-          width: uploadData.width,
-          height: uploadData.height,
-          bytes: uploadData.bytes,
+          duration: uploadData.duration || 0,
+          format: uploadData.format || 'mp4',
+          width: uploadData.width || 0,
+          height: uploadData.height || 0,
+          bytes: uploadData.bytes || 0,
         }),
       });
 
+      // Lê o body UMA VEZ só como texto para save também
+      const saveBodyText = await saveResponse.text();
       if (!saveResponse.ok) {
-        let errorMessage = 'Erro ao salvar vídeo';
-        try {
-          const errorData = await saveResponse.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          const errorText = await saveResponse.text();
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        console.error('Save error:', saveResponse.status, saveBodyText);
+        toast.error(`Erro ao salvar ${saveResponse.status}: ${saveBodyText.slice(0, 100)}`);
+        return;
+      }
+
+      let saveData;
+      try {
+        saveData = JSON.parse(saveBodyText);
+      } catch (parseErr) {
+        console.error('JSON parse error for save:', parseErr);
+        toast.error('Resposta inválida do save.');
+        return;
       }
 
       toast.success('Vídeo adicionado com sucesso!', {
