@@ -119,11 +119,11 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
         body: uploadFormData,
       });
 
-      // Lê o body UMA VEZ só como texto
+      // Lê o body UMA VEZ como text para evitar "stream already read"
       const uploadBodyText = await uploadResponse.text();
       if (!uploadResponse.ok) {
         console.error('Upload error:', uploadResponse.status, uploadBodyText);
-        toast.error(`Erro no upload ${uploadResponse.status}: ${uploadBodyText.slice(0, 100)}`);
+        toast.error(`Erro no upload ${uploadResponse.status}: ${uploadBodyText.slice(0, 100)}...`);
         return;
       }
 
@@ -147,7 +147,7 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
           name: validatedData.name,
           url: uploadData.url,
           autoplay: validatedData.autoplay,
-          showFakeBar: validatedData.showFakeBar,
+          showFakeBar: validatedData.showFakeBar, // Salva como 'show_fake_bar' no DB
           barColor: validatedData.barColor,
           duration: uploadData.duration || 0,
           format: uploadData.format || 'mp4',
@@ -157,11 +157,11 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
         }),
       });
 
-      // Lê o body UMA VEZ só como texto para save também
+      // Lê o body UMA VEZ como text para save também
       const saveBodyText = await saveResponse.text();
       if (!saveResponse.ok) {
         console.error('Save error:', saveResponse.status, saveBodyText);
-        toast.error(`Erro ao salvar ${saveResponse.status}: ${saveBodyText.slice(0, 100)}`);
+        toast.error(`Erro ao salvar ${saveResponse.status}: ${saveBodyText.slice(0, 100)}...`);
         return;
       }
 
@@ -217,7 +217,7 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
             >
               <DialogHeader>
                 <DialogTitle className="text-white text-2xl">Adicionar Vídeo</DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogDescription className="text-gray-50">
                   Faça upload de um novo vídeo MP4 (máx. 500MB) e configure as opções
                 </DialogDescription>
               </DialogHeader>
