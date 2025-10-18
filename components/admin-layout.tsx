@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession, clearSession } from '@/lib/auth';
-import { Home, Plus, Settings, LogOut, Video, Menu, Sliders } from 'lucide-react';
+import { Home, Plus, Settings, LogOut, Video, Menu, Plug } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -27,8 +27,8 @@ interface AdminLayoutProps {
 const navItems = [
   { href: '/admin/dashboard', icon: Home, label: 'Dashboard', isLink: true },
   { action: 'openModal', icon: Plus, label: 'Adicionar Vídeo', isLink: false },
-  { href: '/admin/config', icon: Sliders, label: 'Config', isLink: true },
-  { href: '/admin/settings', icon: Settings, label: 'Configurações', isLink: true },
+  { href: '/admin/api-config', icon: Plug, label: 'Config API', isLink: true },
+  { href: '/admin/settings', icon: Settings, label: 'Configuração', isLink: true },
 ];
 
 function Sidebar({ className }: { className?: string }) {

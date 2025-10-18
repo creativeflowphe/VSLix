@@ -64,20 +64,77 @@ npm install
 
 3. Configure as variáveis de ambiente no arquivo `.env`:
 ```env
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+
+# Cloudinary Configuration
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=seu_cloud_name
+CLOUDINARY_API_KEY=sua_api_key
+CLOUDINARY_API_SECRET=seu_api_secret
+
+# NextAuth Configuration (opcional)
+NEXTAUTH_SECRET=sua_secret_key_aqui
+NEXTAUTH_URL=http://localhost:3000
 ```
 
-4. Execute as migrações do banco de dados:
-   - As migrações estão em `supabase/migrations/`
-   - Execute-as no seu projeto Supabase
+**Variáveis Obrigatórias:**
+- `NEXT_PUBLIC_SUPABASE_URL` - URL do seu projeto Supabase
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Chave anônima do Supabase
+- `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` - Nome da nuvem Cloudinary
+- `CLOUDINARY_API_KEY` - Chave da API Cloudinary
+- `CLOUDINARY_API_SECRET` - Secret da API Cloudinary
 
-5. Inicie o servidor de desenvolvimento:
+**Para obter as credenciais do Cloudinary:**
+- Acesse https://cloudinary.com e crie uma conta gratuita
+- No dashboard, copie o Cloud Name, API Key e API Secret
+- Cole as informações no arquivo `.env`
+
+**Para obter as credenciais do Supabase:**
+- Acesse https://supabase.com e crie um projeto
+- Vá em Settings > API
+- Copie a URL e a anon/public key
+- Cole as informações no arquivo `.env`
+
+4. Execute as migrações do banco de dados no Supabase:
+
+**Opção A: Via Supabase Dashboard (Recomendado)**
+   - Acesse seu projeto no Supabase Dashboard
+   - Navegue para SQL Editor
+   - Copie o conteúdo do arquivo `supabase/migrations/20251018_init_complete_schema.sql`
+   - Cole no SQL Editor e execute
+
+**Opção B: Via Supabase CLI**
+```bash
+# Instale a CLI do Supabase (se ainda não tiver)
+npm install -g supabase
+
+# Faça login
+supabase login
+
+# Link com seu projeto
+supabase link --project-ref seu-project-ref
+
+# Execute as migrações
+supabase db push
+```
+
+**Estrutura das Tabelas Criadas:**
+- `videos` - Armazena metadados dos vídeos
+- `views` - Rastreia visualizações e métricas de engajamento
+- `configs` - Configurações globais da plataforma
+
+5. Teste o build de produção:
+```bash
+npm run build
+```
+
+6. Inicie o servidor de desenvolvimento:
 ```bash
 npm run dev
 ```
 
-6. Acesse a aplicação em `http://localhost:3000`
+7. Acesse a aplicação em `http://localhost:3000`
 
 ## Deploy
 
@@ -85,20 +142,32 @@ npm run dev
 
 1. Faça push do código para o GitHub
 2. Conecte o repositório na Vercel
-3. Configure as variáveis de ambiente
+3. Configure as variáveis de ambiente no Vercel:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+   - `NEXTAUTH_SECRET` (opcional)
+   - `NEXTAUTH_URL` (sua URL do Vercel)
 4. Deploy automático
+
+**Dica:** Use a página "Config API" do admin (`/admin/api-config`) para copiar todas as variáveis em formato JSON e importar diretamente no Vercel.
 
 ### Supabase
 
 1. Crie um projeto no Supabase
 2. Execute as migrações do diretório `supabase/migrations/`
-3. Configure as variáveis de ambiente no projeto
+3. Configure Row Level Security (RLS) nas tabelas
+4. Copie as credenciais para o arquivo `.env`
 
 ### Cloudinary
 
-1. Crie uma conta no Cloudinary
-2. Configure o upload de vídeos
-3. Use as URLs geradas no sistema
+1. Acesse https://cloudinary.com e crie uma conta gratuita
+2. No dashboard, navegue até Settings > Security
+3. Copie o Cloud Name, API Key e API Secret
+4. Configure no arquivo `.env` ou nas variáveis do Vercel
+5. O sistema criará automaticamente uma pasta `vslix-videos` para organizar os uploads
 
 ## Uso
 
@@ -114,12 +183,21 @@ Ou crie suas próprias credenciais - o sistema criará automaticamente o usuári
 
 1. No dashboard, clique no botão "+" ou acesse "Adicionar Vídeo" no menu lateral
 2. O modal de upload será aberto com as seguintes opções:
-   - Nome do vídeo
-   - Upload de arquivo MP4 (máx. 500MB) via drag-and-drop ou clique
-   - Toggle de autoplay
-   - Toggle de barra fake com seletor de cor (padrão: #8b5cf6)
-3. Configure as opções conforme necessário
-4. Clique em "Salvar Vídeo"
+   - **Nome do vídeo**: Digite um nome descritivo
+   - **Upload de arquivo**: Arraste um arquivo MP4 ou clique para selecionar (máx. 500MB)
+   - **Autoplay**: Ativa/desativa reprodução automática
+   - **Barra Fake**: Mostra uma barra de progresso personalizada
+   - **Cor da Barra**: Escolha a cor da barra fake (padrão: #8b5cf6)
+3. Aguarde o upload ser concluído (progresso exibido em toast)
+4. O vídeo será automaticamente:
+   - Enviado para o Cloudinary
+   - Salvo no banco de dados Supabase
+   - Adicionado à lista de vídeos
+
+**Processo de Upload:**
+- Fase 1: Upload do arquivo para o Cloudinary (pode levar alguns minutos dependendo do tamanho)
+- Fase 2: Salvamento dos metadados no Supabase
+- Fase 3: Recarregamento da lista de vídeos
 
 **Nota**: O modal é acessível via múltiplos pontos:
 - Botão "+" no header da tabela de vídeos
@@ -141,34 +219,39 @@ No dashboard de um vídeo específico, clique em "Exportar CSV" para baixar todo
 
 ### Configurações da Plataforma
 
-Acesse `/admin/config` para gerenciar as configurações globais:
+A plataforma possui duas áreas de configuração no menu administrativo:
 
-1. **Cloudinary Setup**
-   - Configure as variáveis de ambiente (CLOUDINARY_CLOUD_NAME, API_KEY, API_SECRET)
-   - Teste o upload diretamente da interface com drag-and-drop de arquivo MP4
-   - Valida a integração e retorna a URL do vídeo uploadado
+#### 1. Config API (`/admin/api-config`)
+Gerencia APIs e conexões externas:
 
-2. **Features Globais**
-   - Toggle de Anti-Download (proteção contra download de vídeos)
-   - Toggle de A/B Testing global
-   - Seletor de cor padrão para barra de progresso (hex picker visual)
-   - Salva as configurações no Supabase
+- **Cloudinary Setup**
+  - Teste o upload diretamente da interface com drag-and-drop de arquivo MP4
+  - Valida a integração e retorna a URL do vídeo uploadado
+  - Lista variáveis necessárias: `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 
-3. **Env Vars Guide**
-   - Lista todas as variáveis de ambiente necessárias
-   - Botão "Copy to Vercel" copia JSON formatado para clipboard
-   - Instruções de como importar no Vercel
+- **Env Vars Guide**
+  - Lista todas as variáveis de ambiente necessárias
+  - Botão "Copy to Vercel" copia JSON formatado para clipboard
+  - Instruções de como importar no Vercel
 
-4. **Supabase Status**
-   - Monitoramento em tempo real da conexão
-   - Estatísticas de vídeos e views
-   - Botão para revalidar conexão
+- **Supabase Status**
+  - Monitoramento em tempo real da conexão
+  - Estatísticas de vídeos e views
+  - Botão para revalidar conexão
+
+#### 2. Configuração (`/admin/settings`)
+Gerencia opções padrão dos vídeos:
+
+- **Anti-Download** - Proteção contra download de vídeos
+- **A/B Testing Global** - Ativa testes A/B em todos os vídeos
+- **Cor Padrão da Barra de Progresso** - Seletor de cor (hex picker visual)
+- Todas as configurações são salvas no banco Supabase
 
 **Como Testar:**
 1. Configure as variáveis no arquivo `.env`
-2. Acesse `/admin/config`
+2. Acesse `/admin/api-config` para testar as conexões
 3. Faça upload de teste no Cloudinary
-4. Configure as features globais
+4. Acesse `/admin/settings` para configurar opções de vídeo
 5. Copie o JSON para deploy no Vercel
 
 ## Scripts

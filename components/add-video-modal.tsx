@@ -109,20 +109,66 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
 
       setIsSubmitting(true);
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.loading('Fazendo upload do vídeo...', { id: 'upload' });
+
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Erro ao fazer upload');
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      toast.loading('Salvando informações do vídeo...', { id: 'upload' });
+
+      const saveResponse = await fetch('/api/videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: validatedData.name,
+          url: uploadData.url,
+          autoplay: validatedData.autoplay,
+          showFakeBar: validatedData.showFakeBar,
+          barColor: validatedData.barColor,
+          duration: uploadData.duration,
+          format: uploadData.format,
+          width: uploadData.width,
+          height: uploadData.height,
+          bytes: uploadData.bytes,
+        }),
+      });
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        throw new Error(errorData.error || 'Erro ao salvar vídeo');
+      }
 
       toast.success('Vídeo adicionado com sucesso!', {
+        id: 'upload',
         description: `${validatedData.name} foi adicionado à sua biblioteca`,
       });
 
       resetForm();
       onOpenChange(false);
+
+      window.location.reload();
     } catch (error) {
       if (error instanceof z.ZodError) {
         const firstError = error.errors[0];
-        toast.error(firstError.message);
+        toast.error(firstError.message, { id: 'upload' });
+      } else if (error instanceof Error) {
+        toast.error(error.message, { id: 'upload' });
       } else {
-        toast.error('Erro ao adicionar vídeo');
+        toast.error('Erro ao adicionar vídeo', { id: 'upload' });
       }
     } finally {
       setIsSubmitting(false);
