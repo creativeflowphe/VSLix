@@ -111,72 +111,69 @@ export function AddVideoModal({ open, onOpenChange }: AddVideoModalProps) {
 
       toast.loading('Fazendo upload do vídeo...', { id: 'upload' });
 
-      // Upload direto pro Cloudinary (bypass Vercel limit)
-      const formData = new FormData();
-      formData.append('file', validatedData.file);
-      formData.append('upload_preset', 'vsl_epica');
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
 
-      const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/video/upload`, {
+      const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
-        body: formData
+        body: uploadFormData,
       });
 
-      const uploadBodyText = await uploadResponse.text();
       if (!uploadResponse.ok) {
-        console.error('Upload error:', uploadResponse.status, uploadBodyText);
-        toast.error(`Erro no upload ${uploadResponse.status}: ${uploadBodyText.slice(0, 100)}...`);
-        return;
+        let errorMessage = 'Erro ao fazer upload';
+        try {
+          const errorData = await uploadResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          const errorText = await uploadResponse.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
-      let uploadData;
-      try {
-        uploadData = JSON.parse(uploadBodyText);
-      } catch (parseErr) {
-        console.error('JSON parse error for upload:', parseErr);
-        toast.error('Resposta inválida do Cloudinary.');
-        return;
-      }
+      const uploadData = await uploadResponse.json();
 
       toast.loading('Salvando informações do vídeo...', { id: 'upload' });
 
-      const { data, error } = await supabase
-        .from('videos')
-        .insert([
-          {
-            name: validatedData.name,
-            video_url: uploadData.secure_url,
-            autoplay: validatedData.autoplay,
-            fake_progress: validatedData.showFakeBar,
-            progress_color: validatedData.barColor,
-            bar_color: validatedData.barColor,
-            thumbnail_url: uploadData.thumbnail_url || '',
-            ab_variant: 'A',
-            duration: uploadData.duration || 0,
-            format: uploadData.format || 'mp4',
-            size: uploadData.bytes || 0,
-            width: uploadData.width || 0,
-            height: uploadData.height || 0,
-            bytes: uploadData.bytes || 0,
-            show_fake_bar: validatedData.showFakeBar,
-            status: 'active' // Salva 'status' como 'active'
-          }
-        ])
-        .select()
-        .single();
+      const saveResponse = await fetch('/api/videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: validatedData.name,
+          url: uploadData.url,
+          autoplay: validatedData.autoplay,
+          showFakeBar: validatedData.showFakeBar,
+          barColor: validatedData.barColor,
+          duration: uploadData.duration,
+          format: uploadData.format,
+          width: uploadData.width,
+          height: uploadData.height,
+          bytes: uploadData.bytes,
+        }),
+      });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        toast.error('Erro ao salvar vídeo: ' + error.message);
-        return;
+      if (!saveResponse.ok) {
+        let errorMessage = 'Erro ao salvar vídeo';
+        try {
+          const errorData = await saveResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          const errorText = await saveResponse.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       toast.success('Vídeo adicionado com sucesso!', {
         id: 'upload',
-        description: `${validatedData.name} foi adicionado à tua biblioteca`,
+        description: `${validatedData.name} foi adicionado à sua biblioteca`,
       });
 
       resetForm();
       onOpenChange(false);
+
       window.location.reload();
     } catch (error) {
       if (error instanceof z.ZodError) {
