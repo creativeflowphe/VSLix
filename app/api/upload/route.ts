@@ -47,12 +47,16 @@ export async function POST(request: NextRequest) {
     if (!uploadResponse.ok) {
       let errorMessage = 'Erro ao fazer upload para o Cloudinary';
       try {
-        const errorData = await uploadResponse.json();
-        console.error('Cloudinary error:', errorData);
-        errorMessage = errorData.error?.message || errorMessage;
+        const responseText = await uploadResponse.text();
+        console.error('Cloudinary error:', responseText);
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch {
+          errorMessage = responseText || errorMessage;
+        }
       } catch (e) {
-        const errorText = await uploadResponse.text();
-        console.error('Cloudinary error text:', errorText);
+        console.error('Error reading response:', e);
       }
       return NextResponse.json(
         { error: errorMessage },
