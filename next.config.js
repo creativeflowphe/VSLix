@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['cloudinary'],
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  bodyParser: {
-    sizeLimit: '100mb', // Passa pro teu 60MB
+  images: { unoptimized: true },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
   },
 };
-
-module.exports = nextConfig;
