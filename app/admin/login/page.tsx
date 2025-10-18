@@ -42,6 +42,28 @@ export default function LoginPage() {
     }
   };
 
+  // Adiciona no import: import { supabase } from '@/lib/supabase';
+
+const handleSignup = async (e) => {
+  e.preventDefault();
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          email_confirmed_at: new Date().toISOString(), // Auto-confirmed
+        },
+      },
+    });
+    if (error) throw error;
+    toast.success('Conta criada!');
+    router.push('/admin/login'); // Volta pro login
+  } catch (error) {
+    toast.error(error.message);
+  }
+};
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
       <motion.div
