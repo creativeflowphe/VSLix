@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const getSupabase = () => createServerComponentClient({ cookies });
 
 export async function GET() {
   try {
+    const supabase = getSupabase();
     const { data, error } = await supabase
       .from('videos')
       .select('*')
@@ -25,12 +24,19 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, url, autoplay, showFakeBar, barColor, duration, format, width, height, bytes } = body;
+    const supabase = getSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!name || !url) {
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { name, video_url, autoplay, showFakeBar, barColor, duration, format, width, height, bytes } = body;
+
+    if (!name || !video_url) {
       return NextResponse.json(
-        { error: 'Nome e URL são obrigatórios' },
+        { error: 'Nome e video_url são obrigatórios' },
         { status: 400 }
       );
     }
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
       .from('videos')
       .insert({
         name,
-        url,
+        video_url,
         autoplay: autoplay ?? true,
         show_fake_bar: showFakeBar ?? false,
         bar_color: barColor || '#8b5cf6',
