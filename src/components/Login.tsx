@@ -8,6 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [userType, setUserType] = useState<'master' | 'owner' | 'client'>('client');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
@@ -19,7 +20,7 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        const { error } = await signUp(email, password, fullName, phone);
+        const { error } = await signUp(email, password, fullName, phone, userType);
         if (error) throw error;
       } else {
         const { error } = await signIn(email, password);
@@ -75,6 +76,22 @@ export default function Login() {
                   style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
                   placeholder="(00) 00000-0000"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Tipo de Usuário
+                </label>
+                <select
+                  value={userType}
+                  onChange={(e) => setUserType(e.target.value as 'master' | 'owner' | 'client')}
+                  className="w-full px-4 py-3 rounded-xl transition-all"
+                  style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                  required
+                >
+                  <option value="client">Cliente</option>
+                  <option value="owner">Dono de Salão</option>
+                  <option value="master">Administrador</option>
+                </select>
               </div>
             </>
           )}
