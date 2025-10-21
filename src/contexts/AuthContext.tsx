@@ -6,7 +6,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; user?: User | null }>;
   signUp: (email: string, password: string, fullName: string, phone?: string, role?: 'owner' | 'client') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -67,15 +67,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      if (error) return { error };
+      if (error) return { error, user: null };
 
       if (data.user) {
         await fetchUserProfile(data.user.id);
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        return { error: null, user: userData };
       }
 
-      return { error: null };
+      return { error: null, user: null };
     } catch (error) {
-      return { error };
+      return { error, user: null };
     }
   };
 

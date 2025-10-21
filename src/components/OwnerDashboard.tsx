@@ -9,6 +9,7 @@ import NotificationTemplates from './NotificationTemplates';
 import MarketingCampaigns from './MarketingCampaigns';
 import ThemeCustomizer from './ThemeCustomizer';
 import ReviewsManagement from './ReviewsManagement';
+import SalonSettings from './SalonSettings';
 
 interface BookingWithDetails extends Booking {
   service: Service;
@@ -195,6 +196,10 @@ export default function OwnerDashboard() {
 
           {activeSection === 'reviews' && salon && (
             <ReviewsManagement salonId={salon.id} />
+          )}
+
+          {activeSection === 'settings' && (
+            <SalonSettings />
           )}
 
           {activeSection === 'dashboard' && (
